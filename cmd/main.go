@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/welps/go-frames-scores/templates"
 
 	"github.com/gin-contrib/cors"
 	ginzap "github.com/gin-contrib/zap"
@@ -30,6 +33,16 @@ func main() {
 	r.GET(
 		"/healthcheck", func(c *gin.Context) {
 			c.JSON(200, gin.H{"message": "ok"})
+		},
+	)
+
+	r.GET(
+		"/", func(c *gin.Context) {
+			c.HTML(
+				http.StatusOK, "index.tmpl", gin.H{
+					"title": "Main website",
+				},
+			)
 		},
 	)
 
@@ -115,6 +128,10 @@ func getConfiguredRouter(logger *zap.Logger) *gin.Engine {
 	corsConfig.AllowAllOrigins = true
 	corsConfig.AllowHeaders = append(corsConfig.AllowHeaders, "Authorization")
 	r.Use(cors.New(corsConfig))
+
+	// Load templates that are *embedded* in binary
+	templates := template.Must(template.New("").ParseFS(templates.EmbeddedTemplates, "*.tmpl"))
+	r.SetHTMLTemplate(templates)
 
 	return r
 }
