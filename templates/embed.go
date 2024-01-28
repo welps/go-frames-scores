@@ -2,7 +2,7 @@ package templates
 
 import "embed"
 
-// EmbeddedTemplates will hold all templates in memory at compile time
+// Embedded will hold all templates in memory at compile time
 //
 //go:embed *
-var EmbeddedTemplates embed.FS
+var Embedded embed.FS

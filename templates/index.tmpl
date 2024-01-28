@@ -1,5 +1,14 @@
+<!DOCTYPE html>
 <html>
-<h1>
-    {{ .title }}
-</h1>
+	<head>
+		<title>welp</title>
+		<style type="text/css">
+			body { background:#000; }
+		</style>
+		<meta property="og:title" content="welp" />
+		<meta property='og:image' content="{{ .image }}" />
+		<meta property="fc:frame" content="vNext" />
+		<meta property="fc:frame:image" content="{{ .image }}" />
+		{{ .buttons }}
+	</head>
 </html>

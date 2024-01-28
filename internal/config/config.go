@@ -12,6 +12,7 @@ type Config struct {
 	Environment        constants.Environment `mapstructure:"ENVIRONMENT"`
 	Port               int                   `mapstructure:"PORT"`
 	GracefulShutdownMS int                   `mapstructure:"GRACEFUL_SHUTDOWN_MS"`
+	PublicURL          string                `mapstructure:"PUBLIC_URL"`
 }
 
 func InitConfig() Config {
@@ -21,6 +22,7 @@ func InitConfig() Config {
 	viper.SetDefault("MAX_IDLE_CONNS", 100)
 	viper.SetDefault("MAX_IDLE_CONNS_PER_HOST", 50)
 	viper.SetDefault("REQUEST_TIMEOUT_MS", (2 * time.Minute).Milliseconds())
+	viper.SetDefault("PUBLIC_URL", "http://localhost:8080")
 
 	viper.AutomaticEnv()
 

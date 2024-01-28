@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/welps/go-frames-scores/assets"
 	"html/template"
 	"log"
 	"net/http"
@@ -40,9 +41,26 @@ func main() {
 		"/", func(c *gin.Context) {
 			c.HTML(
 				http.StatusOK, "index.tmpl", gin.H{
-					"title": "Main website",
+					"image": fmt.Sprintf("%s/assets/template.png", config.PublicURL),
 				},
 			)
+		},
+	)
+
+	r.GET(
+		"/assets/:filename", func(c *gin.Context) {
+			filename := c.Param("filename")
+			if filename == "" {
+				c.AbortWithStatus(http.StatusUnprocessableEntity)
+				return
+			}
+
+			embeddedImage, err := assets.Embedded.ReadFile(filename)
+			if err != nil {
+				c.AbortWithStatus(http.StatusUnprocessableEntity)
+				return
+			}
+			c.Data(http.StatusOK, "image/png", embeddedImage)
 		},
 	)
 
@@ -130,7 +148,7 @@ func getConfiguredRouter(logger *zap.Logger) *gin.Engine {
 	r.Use(cors.New(corsConfig))
 
 	// Load templates that are *embedded* in binary
-	templates := template.Must(template.New("").ParseFS(templates.EmbeddedTemplates, "*.tmpl"))
+	templates := template.Must(template.New("").ParseFS(templates.Embedded, "*.tmpl"))
 	r.SetHTMLTemplate(templates)
 
 	return r
