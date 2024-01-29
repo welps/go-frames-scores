@@ -58,11 +58,11 @@ func (s *service) DrawRoot() (bytes.Buffer, error) {
 	imageContext.SetRGB255(0, 0, 0)
 	imageContext.Clear()
 	imageContext.SetRGB255(254, 254, 254)
-	imageContext.DrawString("Sports Scores", frameImageX/2, frameImageY/8)
+	imageContext.DrawStringAnchored("Sports Scores", frameImageX/2, frameImageY/8, 0.5, 0.5)
 	imageContext.SetFontFace(GetFont(assets.FontNotoEmoji, 72))
 
 	// Most emojis are busted: https://github.com/fogleman/gg/issues/7
-	imageContext.DrawStringAnchored("⚽⚾⛳⛸️", frameImageX/2.40, frameImageY/4, 0.5, 0.5)
+	imageContext.DrawString("⚽⚾⛳⛸️", frameImageX/2.40, frameImageY/4)
 
 	var buf bytes.Buffer
 	err := png.Encode(&buf, imageContext.Image())
