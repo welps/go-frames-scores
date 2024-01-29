@@ -13,16 +13,34 @@ type Config struct {
 	Port               int                   `mapstructure:"PORT"`
 	GracefulShutdownMS int                   `mapstructure:"GRACEFUL_SHUTDOWN_MS"`
 	PublicURL          string                `mapstructure:"PUBLIC_URL"`
+
+	HTTPClientSettings HTTPClientSettings `mapstructure:",squash"`
+	SportsAPIConfig    SportsAPIConfig    `mapstructure:",squash"`
+}
+
+type HTTPClientSettings struct {
+	MaxIdleConns        int `mapstructure:"MAX_IDLE_CONNS"`
+	MaxIdleConnsPerHost int `mapstructure:"MAX_IDLE_CONNS_PER_HOST"`
+	RequestTimeoutMS    int `mapstructure:"REQUEST_TIMEOUT_MS"`
+}
+
+type SportsAPIConfig struct {
+	Host   string `mapstructure:"SPORTS_API_HOST"`
+	APIKey string `mapstructure:"SPORTS_API_KEY"`
 }
 
 func InitConfig() Config {
 	viper.SetDefault("ENVIRONMENT", "development")
 	viper.SetDefault("PORT", 8080)
 	viper.SetDefault("GRACEFUL_SHUTDOWN_MS", (10 * time.Second).Milliseconds())
+	viper.SetDefault("PUBLIC_URL", "http://localhost:8080")
+
 	viper.SetDefault("MAX_IDLE_CONNS", 100)
 	viper.SetDefault("MAX_IDLE_CONNS_PER_HOST", 50)
-	viper.SetDefault("REQUEST_TIMEOUT_MS", (2 * time.Minute).Milliseconds())
-	viper.SetDefault("PUBLIC_URL", "http://localhost:8080")
+	viper.SetDefault("REQUEST_TIMEOUT_MS", (30 * time.Second).Milliseconds())
+
+	viper.SetDefault("SPORTS_API_HOST", "https://sportscore1.p.rapidapi.com")
+	viper.SetDefault("SPORTS_API_KEY", "")
 
 	viper.AutomaticEnv()
 
