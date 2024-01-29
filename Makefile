@@ -1,10 +1,10 @@
 APP=go-frames-scores
 
 .PHONY: build
-build: install build_app
+build: install generate build_app
 
 .PHONY: build_app
-build: install
+build_app: install
 	cd cmd/${APP} && CGO_ENABLED=0 go build -o ../../bin/${APP} .
 
 .PHONY: fmt
@@ -40,6 +40,7 @@ govulncheck:
 	fi
 	@${HOME}/go/bin/govulncheck ./...
 
+.PHONY: generate
 generate:
-	@go install github.com/vektra/mockery/v2
+	@command -v stringer || go install golang.org/x/tools/cmd/stringer@latest
 	@go generate $(shell go list ./...)
