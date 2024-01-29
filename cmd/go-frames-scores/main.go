@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/welps/go-frames-scores/assets"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/robfig/cron/v3"
@@ -54,7 +55,14 @@ func main() {
 	controller := frame.NewController(config.PublicURL, drawingService)
 	r.GET("/", controller.GetRoot)
 	r.POST("/", controller.PostRoot)
-	r.GET("/generated/:filename", controller.Draw)
+
+	// This route only exists because farcaster cached it before I made these routes have a timestamp to bust cache
+	r.GET(
+		"/generated/root.png", func(c *gin.Context) {
+			rootAsset, _ := assets.Embedded.ReadFile("root.png")
+			c.Data(http.StatusOK, "image/png", rootAsset)
+		},
+	)
 	r.GET("/generated/:timestamp/:filename", controller.Draw)
 
 	crontab := cron.New()
