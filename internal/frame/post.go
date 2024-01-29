@@ -1,10 +1,6 @@
 package frame
 
 type Post struct {
-	Data Data `json:"data"`
-}
-
-type Data struct {
 	UntrustedData UntrustedData `json:"untrustedData"`
 }
 

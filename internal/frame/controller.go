@@ -27,7 +27,7 @@ func (c *Controller) GetRoot(ctx *gin.Context) {
 	ctx.HTML(
 		http.StatusOK, "index.tmpl", gin.H{
 			"image":   fmt.Sprintf("%s/%s", c.publicURL, assetPath),
-			"button1": GetFrameButton(1, "Tennis"),
+			"button1": GetFrameButton(1, "🎾 Tennis"),
 		},
 	)
 }
@@ -40,7 +40,7 @@ func (c *Controller) PostRoot(ctx *gin.Context) {
 	}
 
 	zap.S().Debugw("JSON data", zap.Any("data", data))
-	buttonIndex := data.Data.UntrustedData.ButtonIndex
+	buttonIndex := data.UntrustedData.ButtonIndex
 
 	assetPath := c.drawingService.GetAssetPath(buttonIndex)
 	ctx.HTML(
