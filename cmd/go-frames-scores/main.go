@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/robfig/cron/v3"
 	"github.com/welps/go-frames-scores/internal/drawing"
@@ -53,7 +54,7 @@ func main() {
 	controller := frame.NewController(config.PublicURL, drawingService)
 	r.GET("/", controller.GetRoot)
 	r.POST("/", controller.PostRoot)
-	r.GET("/generated/:filename", controller.Draw)
+	r.GET("/generated/:timestamp/:filename", controller.Draw)
 
 	crontab := cron.New()
 	_, err = crontab.AddFunc(
