@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/fogleman/gg"
+	"github.com/samber/lo"
 	"github.com/welps/go-frames-scores/assets"
 	"github.com/welps/go-frames-scores/internal/sports"
 	"image/png"
@@ -77,58 +78,92 @@ func (s *service) DrawTennis(ctx context.Context) (bytes.Buffer, error) {
 	}
 
 	imageContext := gg.NewContext(frameImageX, frameImageY)
-	imageContext.SetFontFace(GetFont(assets.FontWorkSans, 72))
-
 	imageContext.SetRGB255(0, 0, 0)
 	imageContext.Clear()
+
+	// Set title font and color
+	titleFont := GetFont(assets.FontWorkSans, 72)
+	imageContext.SetFontFace(titleFont)
 	imageContext.SetRGB255(254, 254, 254)
-	imageContext.DrawStringAnchored("Tennis Scores", frameImageX/2, frameImageY/8, 0.5, 0.5)
+	imageContext.DrawStringAnchored("Live Tennis Scores", frameImageX/2, frameImageY/12, 0.5, 0.5)
 
-	imageContext.SetFontFace(GetFont(assets.FontWorkSans, 18))
+	// Set font for player names and scores
+	playerNameFontSize := float64(60)
+	playerNameFont := GetFont(assets.FontWorkSans, playerNameFontSize)
+	imageContext.SetFontFace(playerNameFont)
 
-	var startX, startY float64 = 10, frameImageY / 4
-	const boxHeight float64 = 50
-	const boxWidth float64 = float64(frameImageX) / 3 // Divide the width of the image by 3 to fit three entries in a row
-	const padding float64 = 10
-	const scoreSpacing float64 = 5
+	const paddingLeft float64 = 20
+	const paddingRight float64 = 20
+	var startX, startY float64 = paddingLeft, frameImageY / 6
+	const boxHeight float64 = 130
+	const boxWidth float64 = float64(frameImageX) / 2 // Two boxes per row
+	const paddingBetweenBoxes float64 = 10
+
+	// Determine the maximum score width
+	maxScoreWidth := 0.0
+	for _, match := range matches {
+		homeScoresStr := fmt.Sprintf("%v", match.Score.Home)
+		awayScoresStr := fmt.Sprintf("%v", match.Score.Away)
+		homeScoreWidth, _ := imageContext.MeasureString(homeScoresStr)
+		awayScoreWidth, _ := imageContext.MeasureString(awayScoresStr)
+		if homeScoreWidth > maxScoreWidth {
+			maxScoreWidth = homeScoreWidth
+		}
+		if awayScoreWidth > maxScoreWidth {
+			maxScoreWidth = awayScoreWidth
+		}
+	}
 
 	for i, match := range matches {
-		if i%3 == 0 && i != 0 { // Move to next row after every 3 matches
-			startX = 10
-			startY += boxHeight + padding
+		if i%2 == 0 && i != 0 { // Move to next row after every 2 matches
+			startY += boxHeight + paddingBetweenBoxes
 		}
 
 		// Draw rectangle for the current match
-		imageContext.DrawRectangle(startX, startY, boxWidth-padding, boxHeight)
-		imageContext.Fill()
+		imageContext.DrawRectangle(startX, startY, boxWidth-paddingRight, boxHeight)
+		imageContext.SetRGB255(255, 255, 255) // Set color to white for filling
+		imageContext.FillPreserve()           // Fill the rectangle and preserve the path for stroking
+		imageContext.SetRGB255(0, 0, 0)       // Set color to black for the border
+		imageContext.SetLineWidth(2)          // Set the line width for the border
+		imageContext.Stroke()                 // Stroke the border
+
+		// Set text color to black for drawing names and scores
 		imageContext.SetRGB255(0, 0, 0)
 
-		// Draw names and scores for Home player
-		homeNameWidth, _ := imageContext.MeasureString(match.Home.Name)
-		imageContext.DrawString(match.Home.Name, startX, startY+20)
-		scoreX := startX + homeNameWidth + scoreSpacing
-		for _, score := range match.Score.Home {
-			imageContext.DrawString(fmt.Sprintf("%v", score), scoreX, startY+20)
-			scoreWidth, _ := imageContext.MeasureString(fmt.Sprintf("%v", score))
-			scoreX += scoreWidth + scoreSpacing
-		}
+		// Calculate vertical center for the text
+		textYHome := startY + boxHeight/4 + playerNameFontSize/3
+		textYAway := startY + 3*boxHeight/4 + playerNameFontSize/3
 
-		// Draw names and scores for Away player
-		awayNameWidth, _ := imageContext.MeasureString(match.Away.Name)
-		imageContext.DrawString(match.Away.Name, startX, startY+38)
-		scoreX = startX + awayNameWidth + scoreSpacing
-		for _, score := range match.Score.Away {
-			imageContext.DrawString(fmt.Sprintf("%v", score), scoreX, startY+38)
-			scoreWidth, _ := imageContext.MeasureString(fmt.Sprintf("%v", score))
-			scoreX += scoreWidth + scoreSpacing
-		}
+		// Draw names on the left side
+		imageContext.DrawString(match.Home.Name, startX, textYHome)
+		imageContext.DrawString(match.Away.Name, startX, textYAway)
 
-		startX += boxWidth // Move to next column
-		imageContext.SetRGB255(254, 254, 254)
+		// Draw scores on the right side, aligned based on the maximum score width
+		homeScoresStr := fmt.Sprintf("%s", reduceScore(match.Score.Home))
+		awayScoresStr := fmt.Sprintf("%s", reduceScore(match.Score.Away))
+
+		// Position scores on the right by using the maximum score width
+		imageContext.DrawString(homeScoresStr, startX+boxWidth-paddingRight-maxScoreWidth, textYHome)
+		imageContext.DrawString(awayScoresStr, startX+boxWidth-paddingRight-maxScoreWidth, textYAway)
+
+		startX += boxWidth // Move to the next column
+		if i%2 == 1 {      // At the end of the row, reset startX for the next row
+			startX = paddingLeft
+		}
 	}
 
 	var buf bytes.Buffer
 	err = png.Encode(&buf, imageContext.Image())
 
 	return buf, err
+}
+
+func reduceScore(score []string) string {
+	return lo.Reduce(
+		score,
+		func(acc string, curr string, _ int) string {
+			return fmt.Sprintf("%s %s", acc, curr)
+		},
+		"",
+	)
 }

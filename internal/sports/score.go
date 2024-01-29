@@ -59,7 +59,9 @@ func getPeriodKeys(lastPeriod int) []string {
 	for i := 0; i < lastPeriod; i++ {
 		periods = append(periods, fmt.Sprintf("period_%d", i+1))
 	}
-	periods = append(periods, "current")
+
+	// TODO:: What is this for?
+	//periods = append(periods, "current")
 
 	return periods
 }
