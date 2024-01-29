@@ -57,7 +57,7 @@ func main() {
 
 	crontab := cron.New()
 	_, err = crontab.AddFunc(
-		"@every 10m", func() {
+		"@every 1m", func() {
 			err = service.UpdateMatches(context.Background(), true)
 			if err != nil {
 				zap.S().Error("failed to update live scores", zap.Error(err))
