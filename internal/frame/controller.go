@@ -64,5 +64,6 @@ func (c *Controller) Draw(ctx *gin.Context) {
 		return
 	}
 
+	ctx.Header("Cache-Control", "public, max-age=60")
 	ctx.Data(http.StatusOK, "image/png", buf.Bytes())
 }
