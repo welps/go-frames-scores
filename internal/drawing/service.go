@@ -9,6 +9,7 @@ import (
 	"github.com/welps/go-frames-scores/assets"
 	"github.com/welps/go-frames-scores/internal/sports"
 	"image/png"
+	"time"
 )
 
 const (
@@ -39,7 +40,9 @@ type service struct {
 }
 
 func (s *service) GetAssetPath(buttonIndex int) string {
-	return fmt.Sprintf("%s/%s", generatedDirectory, assetMapping[buttonIndex])
+	// Timestamp is used to prevent caching
+	timestamp := time.Now().Unix()
+	return fmt.Sprintf("%s/%d/%s", generatedDirectory, timestamp, assetMapping[buttonIndex])
 }
 
 func (s *service) DrawFile(ctx context.Context, filename string) (bytes.Buffer, error) {
