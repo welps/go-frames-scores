@@ -2,6 +2,7 @@
 
 WARNING: Most of this is pretty hacked together
 
+
 ## Requirements
 
 - Get an API key from https://rapidapi.com/tipsters/api/sportscore1
