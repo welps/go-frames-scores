@@ -8,7 +8,8 @@ import (
 )
 
 type Client interface {
-	GetLiveMatches(ctx context.Context, gameType GameType) (ClientLiveMatchResponse, error)
+	GetMatches(ctx context.Context, gameType GameType) (ClientMatchResponse, error)
+	GetLiveMatches(ctx context.Context, gameType GameType) (ClientMatchResponse, error)
 }
 
 type client struct {
@@ -40,10 +41,45 @@ func (c *client) getSportsID(gameType GameType) int {
 	}
 }
 
-func (c *client) GetLiveMatches(ctx context.Context, gameType GameType) (ClientLiveMatchResponse, error) {
+func (c *client) GetMatches(ctx context.Context, gameType GameType) (ClientMatchResponse, error) {
 	sportsID := c.getSportsID(gameType)
 	if sportsID == 0 {
-		return ClientLiveMatchResponse{}, fmt.Errorf("invalid game type")
+		return ClientMatchResponse{}, fmt.Errorf("invalid game type")
+	}
+	// TODO:: Pagination
+	url := fmt.Sprintf("%s/sports/%d/events", c.apiHost, c.getSportsID(gameType))
+
+	response, err := c.resty.R().
+		SetHeader("x-rapidapi-key", c.apiKey).
+		SetContext(ctx).
+		Get(url)
+
+	if err != nil {
+		return ClientMatchResponse{}, err
+	}
+
+	status := response.StatusCode()
+	if status != 200 {
+		return ClientMatchResponse{}, fmt.Errorf(
+			"failed to get scores - status code %d, response body: %s",
+			status,
+			response.Body(),
+		)
+	}
+
+	var result ClientMatchResponse
+	err = json.Unmarshal(response.Body(), &result)
+	if err != nil {
+		return ClientMatchResponse{}, fmt.Errorf("failed to unmarshal response body: %w", err)
+	}
+
+	return result, nil
+}
+
+func (c *client) GetLiveMatches(ctx context.Context, gameType GameType) (ClientMatchResponse, error) {
+	sportsID := c.getSportsID(gameType)
+	if sportsID == 0 {
+		return ClientMatchResponse{}, fmt.Errorf("invalid game type")
 	}
 	url := fmt.Sprintf("%s/sports/%d/events/live", c.apiHost, c.getSportsID(gameType))
 
@@ -53,22 +89,22 @@ func (c *client) GetLiveMatches(ctx context.Context, gameType GameType) (ClientL
 		Get(url)
 
 	if err != nil {
-		return ClientLiveMatchResponse{}, err
+		return ClientMatchResponse{}, err
 	}
 
 	status := response.StatusCode()
 	if status != 200 {
-		return ClientLiveMatchResponse{}, fmt.Errorf(
+		return ClientMatchResponse{}, fmt.Errorf(
 			"failed to get scores - status code %d, response body: %s",
 			status,
 			response.Body(),
 		)
 	}
 
-	var result ClientLiveMatchResponse
+	var result ClientMatchResponse
 	err = json.Unmarshal(response.Body(), &result)
 	if err != nil {
-		return ClientLiveMatchResponse{}, fmt.Errorf("failed to unmarshal response body: %w", err)
+		return ClientMatchResponse{}, fmt.Errorf("failed to unmarshal response body: %w", err)
 	}
 
 	return result, nil

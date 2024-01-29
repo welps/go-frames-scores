@@ -6,6 +6,7 @@ const (
 	FontsPath     = "fonts"
 	FontWorkSans  = "WorkSans-Medium.ttf"
 	FontNotoEmoji = "NotoEmoji-Regular.ttf"
+	FontFiraCode  = "FiraCode-Regular.ttf"
 )
 
 // Embedded will hold all assets in memory at compile time

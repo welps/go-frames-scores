@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-resty/resty/v2"
+	"github.com/robfig/cron/v3"
 	"github.com/welps/go-frames-scores/internal/drawing"
 	"github.com/welps/go-frames-scores/internal/frame"
 	"github.com/welps/go-frames-scores/internal/sports"
@@ -38,7 +39,7 @@ func main() {
 	fatalAndExitOnError(err, "Unable to create sports client")
 
 	service := sports.NewService(client)
-	err = service.UpdateMatches(context.Background())
+	err = service.UpdateMatches(context.Background(), true)
 	fatalAndExitOnError(err, "Unable to update matches")
 	drawingService := drawing.NewService(service)
 
@@ -54,17 +55,17 @@ func main() {
 	r.POST("/", controller.PostRoot)
 	r.GET("/generated/:filename", controller.Draw)
 
-	r.GET(
-		"/scores", func(c *gin.Context) {
-			matches, err := service.GetMatches(context.Background(), sports.Tennis)
+	crontab := cron.New()
+	_, err = crontab.AddFunc(
+		"@every 10m", func() {
+			err = service.UpdateMatches(context.Background(), true)
 			if err != nil {
-				zap.S().Errorw("Unable to get matches", zap.Error(err))
-				c.AbortWithStatus(http.StatusInternalServerError)
+				zap.S().Error("failed to update live scores", zap.Error(err))
 			}
-
-			c.JSON(200, gin.H{"message": "ok", "matches": matches})
 		},
 	)
+	fatalAndExitOnError(err, "Unable to add cron job")
+	crontab.Start()
 
 	// Start main server with graceful shutdown
 	listenAndServe(

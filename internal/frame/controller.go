@@ -28,6 +28,7 @@ func (c *Controller) GetRoot(ctx *gin.Context) {
 		http.StatusOK, "index.tmpl", gin.H{
 			"image":   fmt.Sprintf("%s/%s", c.publicURL, assetPath),
 			"button1": GetFrameButton(1, "🎾 Tennis"),
+			"button2": GetFrameButton(2, "🏀 Basketball"),
 		},
 	)
 }

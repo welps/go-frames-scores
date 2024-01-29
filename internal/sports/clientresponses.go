@@ -5,11 +5,11 @@ import (
 	"strconv"
 )
 
-type ClientLiveMatchResponse struct {
-	Matches []ClientLiveMatch `json:"data"`
+type ClientMatchResponse struct {
+	Matches []ClientMatch `json:"data"`
 }
 
-type ClientLiveMatch struct {
+type ClientMatch struct {
 	ID                   int               `json:"id"`
 	SportID              int               `json:"sport_id"`
 	HomeTeamID           int               `json:"home_team_id"`

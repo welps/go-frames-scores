@@ -9,29 +9,29 @@ import (
 )
 
 type Service interface {
-	GetMatches(ctx context.Context, gameType GameType) ([]Match, error)
-	UpdateMatches(ctx context.Context) error
+	GetMatches(ctx context.Context, gameType GameType, live bool) ([]Match, error)
+	UpdateMatches(ctx context.Context, live bool) error
 }
 
 type service struct {
-	cache  map[GameType][]Match
+	cache  map[string][]Match
 	mutex  *sync.RWMutex
 	client Client
 }
 
 func NewService(client Client) Service {
 	return &service{
-		cache:  make(map[GameType][]Match),
+		cache:  make(map[string][]Match),
 		mutex:  &sync.RWMutex{},
 		client: client,
 	}
 }
 
-func (s *service) GetMatches(_ context.Context, gameType GameType) ([]Match, error) {
+func (s *service) GetMatches(_ context.Context, gameType GameType, live bool) ([]Match, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	matches, ok := s.cache[gameType]
+	matches, ok := s.cache[s.getKey(gameType, live)]
 	if !ok {
 		return nil, fmt.Errorf("no matches found for %s", gameType)
 	}
@@ -39,8 +39,12 @@ func (s *service) GetMatches(_ context.Context, gameType GameType) ([]Match, err
 	return matches, nil
 }
 
-func (s *service) UpdateMatches(ctx context.Context) error {
-	err := s.updateMatches(ctx, Tennis, FormatTennisScore)
+func (s *service) UpdateMatches(ctx context.Context, live bool) error {
+	err := s.updateMatches(ctx, Tennis, FormatTennisScore, live)
+	if err != nil {
+		return err
+	}
+	err = s.updateMatches(ctx, Basketball, FormatBasketballScore, live)
 	if err != nil {
 		return err
 	}
@@ -48,19 +52,25 @@ func (s *service) UpdateMatches(ctx context.Context) error {
 	return nil
 }
 
-func (s *service) updateMatches(ctx context.Context, gameType GameType, scoringFunc ScoringFunc) error {
+func (s *service) updateMatches(ctx context.Context, gameType GameType, scoringFunc ScoringFunc, live bool) error {
 	zap.S().Infof("Updating matches for %s", gameType)
 
-	response, err := s.client.GetLiveMatches(ctx, gameType)
+	var response ClientMatchResponse
+	var err error
+	if live {
+		response, err = s.client.GetLiveMatches(ctx, gameType)
+	} else {
+		response, err = s.client.GetMatches(ctx, gameType)
+	}
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to get matches: %w", err)
 	}
 
 	matches := make([]Match, 0, len(response.Matches))
 	for _, match := range response.Matches {
 		score, err := scoringFunc(match)
 		if err != nil {
-			zap.S().Errorw("unable to format tennis score", zap.Error(err))
+			zap.S().Errorw(fmt.Sprintf("unable to format %s score", gameType), zap.Error(err))
 			continue
 		}
 
@@ -78,7 +88,16 @@ func (s *service) updateMatches(ctx context.Context, gameType GameType, scoringF
 
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	s.cache[gameType] = matches
+	s.cache[s.getKey(gameType, live)] = matches
 
 	return nil
+}
+
+func (s *service) getKey(gameType GameType, live bool) string {
+	var liveStr string
+	if live {
+		liveStr = "live"
+	}
+
+	return fmt.Sprintf("%s_%s", gameType, liveStr)
 }

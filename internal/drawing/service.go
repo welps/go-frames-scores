@@ -20,6 +20,7 @@ const (
 var assetMapping = map[int]string{
 	0: "root.png",
 	1: "tennis.png",
+	2: "basketball.png",
 }
 
 type Service interface {
@@ -47,6 +48,8 @@ func (s *service) DrawFile(ctx context.Context, filename string) (bytes.Buffer, 
 		return s.DrawRoot()
 	case "tennis.png":
 		return s.DrawTennis(ctx)
+	case "basketball.png":
+		return s.DrawBasketball(ctx)
 	default:
 		return bytes.Buffer{}, nil
 	}
@@ -54,16 +57,16 @@ func (s *service) DrawFile(ctx context.Context, filename string) (bytes.Buffer, 
 
 func (s *service) DrawRoot() (bytes.Buffer, error) {
 	imageContext := gg.NewContext(frameImageX, frameImageY)
-	imageContext.SetFontFace(GetFont(assets.FontWorkSans, 72))
+	imageContext.SetFontFace(GetFont(assets.FontFiraCode, 72))
 
 	imageContext.SetRGB255(0, 0, 0)
 	imageContext.Clear()
 	imageContext.SetRGB255(254, 254, 254)
-	imageContext.DrawStringAnchored("Sports Scores", frameImageX/2, frameImageY/8, 0.5, 0.5)
+	imageContext.DrawStringAnchored("Live Sports Scores", frameImageX/2, frameImageY/4, 0.5, 0.5)
 	imageContext.SetFontFace(GetFont(assets.FontNotoEmoji, 72))
 
 	// Most emojis are busted: https://github.com/fogleman/gg/issues/7
-	imageContext.DrawString("⚽⚾⛳⛸️", frameImageX/2.40, frameImageY/4)
+	imageContext.DrawString("⚽⚾⛳⛸️", frameImageX/2.40, frameImageY/2)
 
 	var buf bytes.Buffer
 	err := png.Encode(&buf, imageContext.Image())
@@ -71,25 +74,52 @@ func (s *service) DrawRoot() (bytes.Buffer, error) {
 	return buf, err
 }
 
-func (s *service) DrawTennis(ctx context.Context) (bytes.Buffer, error) {
-	matches, err := s.sportsService.GetMatches(ctx, sports.Tennis)
+func (s *service) DrawBasketball(ctx context.Context) (bytes.Buffer, error) {
+	matches, err := s.sportsService.GetMatches(ctx, sports.Basketball, true)
 	if err != nil {
 		return bytes.Buffer{}, err
 	}
+	buf, err := s.drawSport(ctx, sports.Basketball, matches)
+	return buf, err
+}
 
+func (s *service) DrawTennis(ctx context.Context) (bytes.Buffer, error) {
+	matches, err := s.sportsService.GetMatches(ctx, sports.Tennis, true)
+	if err != nil {
+		return bytes.Buffer{}, err
+	}
+	buf, err := s.drawSport(ctx, sports.Tennis, matches)
+	return buf, err
+}
+
+func (s *service) drawSport(_ context.Context, gameType sports.GameType, matches []sports.Match) (
+	bytes.Buffer,
+	error,
+) {
 	imageContext := gg.NewContext(frameImageX, frameImageY)
 	imageContext.SetRGB255(0, 0, 0)
 	imageContext.Clear()
 
 	// Set title font and color
-	titleFont := GetFont(assets.FontWorkSans, 72)
+	titleFont := GetFont(assets.FontFiraCode, 72)
 	imageContext.SetFontFace(titleFont)
 	imageContext.SetRGB255(254, 254, 254)
-	imageContext.DrawStringAnchored("Live Tennis Scores", frameImageX/2, frameImageY/12, 0.5, 0.5)
+	imageContext.DrawStringAnchored(fmt.Sprintf("Live %s Scores", gameType), frameImageX/2, frameImageY/12, 0.5, 0.5)
 
+	if len(matches) == 0 {
+		subTitleFont := GetFont(assets.FontFiraCode, 50)
+		imageContext.SetFontFace(subTitleFont)
+		imageContext.DrawStringAnchored("No live matches found :(", frameImageX/2, frameImageY/3, 0.5, 0.5)
+
+		var buf bytes.Buffer
+		err := png.Encode(&buf, imageContext.Image())
+
+		return buf, err
+
+	}
 	// Set font for player names and scores
 	playerNameFontSize := float64(60)
-	playerNameFont := GetFont(assets.FontWorkSans, playerNameFontSize)
+	playerNameFont := GetFont(assets.FontFiraCode, playerNameFontSize)
 	imageContext.SetFontFace(playerNameFont)
 
 	const paddingLeft float64 = 20
@@ -153,7 +183,7 @@ func (s *service) DrawTennis(ctx context.Context) (bytes.Buffer, error) {
 	}
 
 	var buf bytes.Buffer
-	err = png.Encode(&buf, imageContext.Image())
+	err := png.Encode(&buf, imageContext.Image())
 
 	return buf, err
 }
