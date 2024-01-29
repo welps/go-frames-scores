@@ -4,7 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/welps/go-frames-scores/assets"
+	"github.com/go-resty/resty/v2"
+	"github.com/welps/go-frames-scores/internal/drawing"
+	"github.com/welps/go-frames-scores/internal/frame"
+	"github.com/welps/go-frames-scores/internal/sports"
+
 	"html/template"
 	"log"
 	"net/http"
@@ -12,13 +16,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/welps/go-frames-scores/templates"
-
 	"github.com/gin-contrib/cors"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"github.com/welps/go-frames-scores/internal/config"
 	"github.com/welps/go-frames-scores/internal/constants"
+	"github.com/welps/go-frames-scores/templates"
 	"go.uber.org/zap"
 )
 
@@ -30,6 +33,15 @@ func main() {
 	// nolint: errcheck
 	defer logger.Sync()
 
+	httpClient := resty.NewWithClient(getHTTPClient(config.HTTPClientSettings))
+	client, err := sports.NewClient(httpClient, config.SportsAPIConfig.Host, config.SportsAPIConfig.APIKey)
+	fatalAndExitOnError(err, "Unable to create sports client")
+
+	service := sports.NewService(client)
+	err = service.UpdateMatches(context.Background())
+	fatalAndExitOnError(err, "Unable to update matches")
+	drawingService := drawing.NewService(service)
+
 	r := getConfiguredRouter(logger)
 	r.GET(
 		"/healthcheck", func(c *gin.Context) {
@@ -37,30 +49,20 @@ func main() {
 		},
 	)
 
-	r.GET(
-		"/", func(c *gin.Context) {
-			c.HTML(
-				http.StatusOK, "index.tmpl", gin.H{
-					"image": fmt.Sprintf("%s/assets/template.png", config.PublicURL),
-				},
-			)
-		},
-	)
+	controller := frame.NewController(config.PublicURL, drawingService)
+	r.GET("/", controller.GetRoot)
+	r.POST("/", controller.PostRoot)
+	r.GET("/generated/:filename", controller.Draw)
 
 	r.GET(
-		"/assets/:filename", func(c *gin.Context) {
-			filename := c.Param("filename")
-			if filename == "" {
-				c.AbortWithStatus(http.StatusUnprocessableEntity)
-				return
-			}
-
-			embeddedImage, err := assets.Embedded.ReadFile(filename)
+		"/scores", func(c *gin.Context) {
+			matches, err := service.GetMatches(context.Background(), sports.Tennis)
 			if err != nil {
-				c.AbortWithStatus(http.StatusUnprocessableEntity)
-				return
+				zap.S().Errorw("Unable to get matches", zap.Error(err))
+				c.AbortWithStatus(http.StatusInternalServerError)
 			}
-			c.Data(http.StatusOK, "image/png", embeddedImage)
+
+			c.JSON(200, gin.H{"message": "ok", "matches": matches})
 		},
 	)
 
@@ -152,4 +154,17 @@ func getConfiguredRouter(logger *zap.Logger) *gin.Engine {
 	r.SetHTMLTemplate(templates)
 
 	return r
+}
+
+// getHTTPClient returns a configured HTTP client with sane defaults
+func getHTTPClient(settings config.HTTPClientSettings) *http.Client {
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.MaxIdleConns = settings.MaxIdleConns
+	t.MaxIdleConnsPerHost = settings.MaxIdleConnsPerHost
+	t.MaxConnsPerHost = settings.MaxIdleConnsPerHost * 2
+
+	return &http.Client{
+		Transport: t,
+		Timeout:   time.Duration(settings.RequestTimeoutMS) * time.Millisecond,
+	}
 }
