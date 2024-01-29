@@ -54,6 +54,7 @@ func main() {
 	controller := frame.NewController(config.PublicURL, drawingService)
 	r.GET("/", controller.GetRoot)
 	r.POST("/", controller.PostRoot)
+	r.GET("/generated/:filename", controller.Draw)
 	r.GET("/generated/:timestamp/:filename", controller.Draw)
 
 	crontab := cron.New()
