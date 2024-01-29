@@ -24,6 +24,7 @@ func NewController(publicURL string, drawingService drawing.Service) *Controller
 func (c *Controller) GetRoot(ctx *gin.Context) {
 	assetPath := c.drawingService.GetAssetPath(0)
 
+	ctx.Header("Cache-Control", "no-cache")
 	ctx.HTML(
 		http.StatusOK, "index.tmpl", gin.H{
 			"image":   fmt.Sprintf("%s/%s", c.publicURL, assetPath),
@@ -44,6 +45,7 @@ func (c *Controller) PostRoot(ctx *gin.Context) {
 	buttonIndex := data.UntrustedData.ButtonIndex
 
 	assetPath := c.drawingService.GetAssetPath(buttonIndex)
+	ctx.Header("Cache-Control", "no-cache")
 	ctx.HTML(
 		http.StatusOK, "index.tmpl", gin.H{
 			"image": fmt.Sprintf("%s/%s", c.publicURL, assetPath),
@@ -64,6 +66,6 @@ func (c *Controller) Draw(ctx *gin.Context) {
 		return
 	}
 
-	ctx.Header("Cache-Control", "public, max-age=60")
+	ctx.Header("Cache-Control", "no-cache")
 	ctx.Data(http.StatusOK, "image/png", buf.Bytes())
 }
